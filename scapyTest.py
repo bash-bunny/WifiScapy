@@ -2,7 +2,7 @@ import threading, os, time, random
 from scapy.all import *
 from scapy.layers.dot11 import RadioTap, Dot11, Dot11Deauth
 
-interface = "wlp0s20f0u1mon"
+interface = "changeme"
 
 def hopper(iface):
     n = 1
