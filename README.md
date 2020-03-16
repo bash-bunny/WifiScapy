@@ -10,6 +10,8 @@ Just grab the script you want to play
 
 Last version of scapy and Python2.7(yes it only works on Python 2)
 
+You have to change the variable ``` interface ``` in the scripts with you own monitor interface
+
 ### Installing
 
 ```
