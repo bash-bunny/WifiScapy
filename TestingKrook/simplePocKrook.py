@@ -18,6 +18,5 @@ def checkEncrypt(pkt):
 
 interface = raw_input("Enter the interface to use:\n")
 mac = raw_input("Enter mac address:\n")
-#interface = 'wlp0s20f0u1mon'
 sniff(iface=interface, prn=checkEncrypt, filter="ether host " + mac, lfilter=lambda pkt: (Dot11CCMP in pkt or Dot11TKIP in pkt or Dot11Encrypted in pkt))
 f.close()
