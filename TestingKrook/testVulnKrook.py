@@ -4,7 +4,7 @@ from scapy.layers.dot11 import RadioTap, Dot11, Dot11Deauth
 import libwifi
 from libwifi import *
 
-interface = "wlp0s20f0u3mon"
+interface = "changeme"
 
 class ChannelHopper:
     def __init__(self):
